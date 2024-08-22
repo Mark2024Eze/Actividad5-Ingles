@@ -1,1 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>English Quiz Game</title>
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #0033a0, #0044cc); /* Azul Francia */
+            color: #fff;
+        }
+        .start-container, .quiz-container, .results-container {
+            text-align: center;
+            background: #fff;
+            color: #0033a0;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            display: none;
+            transition: all 0.3s ease-in-out;
+        }
+        .start-container.active, .quiz-container.active, .results-container.active {
+            display: block;
+        }
+        .start-logo {
+            width: 100px;
+            margin-bottom: 20px;
+        }
+        .start-title, .results-title {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        .start-description, .results-description {
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            color: #555;
+        }
+        .start-button, .retry-button {
+            font-size: 1.5rem;
+            padding: 15px 30px;
+            background-color: #0033a0;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s ease, transform 0.3s ease;
+        }
+        .start-button:hover, .retry-button:hover {
+            background-color: #002a80; /* Azul Francia oscuro */
+            transform: scale(1.05);
+        }
+        .quiz-question {
+            font-size: 1.8rem;
+            margin-bottom: 25px;
+            font-weight: bold;
+        }
+        .quiz-options button {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            font-size: 1.2rem;
+            background-color: #0033a0;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+        }
+        .quiz-options button:hover {
+            background-color: #002a80;
+            transform: scale(1.05);
+        }
+        .quiz-options button.correct {
+            background-color: #28a745;
+            box-shadow: 0 4px 10px rgba(0, 255, 0, 0.4);
+        }
+        .quiz-options button.wrong {
+            background-color: #dc3545;
+            box-shadow: 0 4px 10px rgba(255, 0, 0, 0.4);
+        }
+        .timer-container {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #fff;
+        }
+        .timer {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 60px;
+            height: 60px;
+            background-color: #0033a0;
+            color: #fff;
+            border-radius: 50%;
+            border: 3px solid #fff;
+            animation: shake 0.5s infinite;
+        }
+        @keyframes shake {
+            0% { transform: translateX(-2px); }
+            25% { transform: translateX(2px); }
+            50% { transform: translateX(-2px); }
+            75% { transform: translateX(2px); }
+            100% { transform: translateX(-2px); }
+        }
+        .results-container {
+            animation: fadeIn 1s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="start-container active" id="start-container">
+        <img src="logo.png" alt="Logo" class="start-logo">
+        <div class="start-title">Welcome to the English Quiz Game!</div>
+        <div class="start-description">Test your English skills with this fun and interactive quiz.</div>
+        <button class="start-button" onclick="startQuiz()">Start Quiz</button>
+    </div>
+
+    <div class="quiz-container" id="quiz-container">
+        <div id="question-container">
+            <div class="quiz-question" id="question"></div>
+            <div class="quiz-options" id="options-container"></div>
+        </div>
+        <div class="timer-container">
+            <div class="timer" id="timer">5</div>
+        </div>
+    </div>
+
+    <div class="results-container" id="results-container">
+        <div class="results-title">Quiz Results</div>
+        <div class="results-description" id="results-description"></div>
+        <button class="retry-button" onclick="restartQuiz()">Retry</button>
+    </div>
+
+    <script>
+        const questions = [
+            {
+                question: "What is the capital of France?",
+                options: ["Berlin", "Madrid", "Paris", "Rome"],
+                correct: 2
+            },
+            {
+                question: "Which word is a verb?",
+                options: ["Jump", "Apple", "Dog", "House"],
+                correct: 0
+            },
+            {
+                question: "Which activity involves water?",
+                options: ["Swimming", "Running", "Cycling", "Reading"],
+                correct: 0
+            },
+            {
+                question: "Which word describes an indoor activity?",
+                options: ["Cooking", "Hiking", "Jogging", "Camping"],
+                correct: 0
+            },
+            {
+                question: "Which of the following is a musical activity?",
+                options: ["Singing", "Drawing", "Writing", "Gardening"],
+                correct: 0
+            },
+            {
+                question: "Which word describes an outdoor activity?",
+                options: ["Gardening", "Sleeping", "Cooking", "Reading"],
+                correct: 0
+            }
+        ];
+
+        let currentQuestionIndex = 0;
+        let countdown;
+        let score = { correct: 0, incorrect: 0 };
+
+        function startQuiz() {
+            document.getElementById('start-container').classList.remove('active');
+            document.getElementById('quiz-container').classList.add('active');
+            showQuestion();
+        }
+
+        function showQuestion() {
+            clearInterval(countdown);
+            const question = questions[currentQuestionIndex];
+            document.getElementById('question').textContent = question.question;
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = '';
+            const shuffledOptions = shuffleOptions([...question.options]);
+            shuffledOptions.forEach((option, index) => {
+                const button = document.createElement('button');
+                button.textContent = option;
+                button.onclick = () => checkAnswer(index);
+                optionsContainer.appendChild(button);
+            });
+            document.getElementById('timer').textContent = "5";
+            startTimer();
+        }
+
+        function shuffleOptions(options) {
+            for (let i = options.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [options[i], options[j]] = [options[j], options[i]];
+            }
+            return options;
+        }
+
+        function startTimer() {
+            let timeLeft = 5;
+            countdown = setInterval(() => {
+                timeLeft--;
+                document.getElementById('timer').textContent = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(countdown);
+                    showCorrectAndWrongAnswers();
+                    score.incorrect++;
+                    setTimeout(() => {
+                        moveToNextQuestion();
+                    }, 1000);
+                }
+            }, 1000);
+        }
+
+        function showCorrectAndWrongAnswers() {
+            const question = questions[currentQuestionIndex];
+            const buttons = document.querySelectorAll('.quiz-options button');
+            buttons.forEach((button, index) => {
+                if (button.textContent === question.options[question.correct]) {
+                    button.classList.add('correct');
+                } else {
+                    button.classList.add('wrong');
+                }
+            });
+        }
+
+        function checkAnswer(option) {
+            clearInterval(countdown);
+            const question = questions[currentQuestionIndex];
+            if (option === question.correct) {
+                score.correct++;
+            } else {
+                score.incorrect++;
+            }
+            showCorrectAndWrongAnswers();
+            setTimeout(() => {
+                moveToNextQuestion();
+            }, 1000);
+        }
+
+        function moveToNextQuestion() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < questions.length) {
+                showQuestion();
+            } else {
+                showResults();
+            }
+        }
+
+        function showResults() {
+            document.getElementById('quiz-container').classList.remove('active');
+            document.getElementById('results-container').classList.add('active');
+            document.getElementById('results-description').innerHTML = `
+                <p>You got ${score.correct} out of ${questions.length} correct!</p>
+                <p>Incorrect answers: ${score.incorrect}</p>
+            `;
+        }
+
+        function restartQuiz() {
+            currentQuestionIndex = 0;
+            score = { correct: 0, incorrect: 0 };
+            document.getElementById('results-container').classList.remove('active');
+            document.getElementById('start-container').classList.add('active');
+        }
+    </script>
+</body>
+</html>
 
